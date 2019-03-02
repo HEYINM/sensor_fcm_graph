@@ -1,0 +1,92 @@
+<?php
+ini_set('display_errors', 'On');
+error_reporting(E_ALL|E_STRICT);
+ 
+// MySQL 접속
+$mysql_host = 'localhost';
+$mysql_user = 'phpmyadmin';
+$mysql_password = 'root';
+$mysql_db = 'test_tempdb';
+$conn = mysqli_connect($mysql_host, $mysql_user, $mysql_password, $mysql_db) or die("not connected.");
+//$dbconn = mysqli_select_db($mysql_db, $conn);
+ 
+// DB에서 원하는 데이터 검색
+$sql="
+select * from (
+        SELECT DATE_FORMAT( datetime,  '%m-%d %HH' )  mdh , COUNT( * ) cnt, SUM( temperature ) , 
+        round(SUM( temperature ) / COUNT( * ),1)  atemper
+        FROM  `temperature`
+        GROUP BY DATE_FORMAT( datetime,  '%Y%m%d%H' )
+        order by datetime desc
+        limit 12
+        ) t_a
+order by t_a.mdh
+";
+ 
+$result = mysqli_query($conn, $sql) ;
+ 
+$str_mdh="";
+$str_atemper="";
+ 
+// 온습도 문자열 연결
+while ($row = mysqli_fetch_array($result,MYSQLI_ASSOC)) {
+     $str_mdh .="'".$row['mdh']."',";
+     $str_atemper .="".$row['atemper'].",";
+}
+ 
+// 오른쪽 공백 제거
+$str_mdh= substr($str_mdh,0,-1);
+$str_atemper= substr($str_atemper,0,-1);
+ 
+?>
+<!DOCTYPE HTML>
+<html>
+<head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>House Monitor</title>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+        <style type="text/css">${demo.css}</style>
+        <script type="text/javascript">
+                                         
+$(function () {
+    $('#temp').highcharts({
+        chart: {
+            type: 'line'
+        },
+        title: {
+            text: 'Temperature'
+        },
+        subtitle: {
+            text: 'made by hyeri'
+        },
+        xAxis: {
+            categories: [<?php echo $str_mdh?>]
+        },
+        yAxis: {
+            title: {
+                text: 'Temperature (°C)'
+            }
+        },
+        plotOptions: {
+            line: {
+                dataLabels: {
+                    enabled: true
+                },
+                enableMouseTracking: false                                                                                                                                  
+            }
+        },                                                                                                                                                                       
+        series: [{
+            name: 'HOUSE',
+            data: [<?php echo $str_atemper?>]
+        }]
+    });
+});
+        </script>
+</head>
+<body>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <div id="temp" style="width: 900px; height: 440px; margin: 30px auto"></div>
+        <div id="humi" style="width: 900px; height: 440px; margin: 30px auto"></div>
+</body>
+</html>
